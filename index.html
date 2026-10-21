@@ -66,6 +66,19 @@ main{flex:1;min-height:0;position:relative}
 .text p.title{font-weight:600;font-size:1.25em;margin-bottom:.4em;color:var(--ai)}
 .text p.sep{text-align:center;color:var(--muted)}
 .text rt{font-size:.5em;color:var(--muted)}
+/* 上部メニューの開閉。1段目（書名・ファイル名・開閉ボタン）は常に表示、たたむとこの1段だけになる */
+.head{display:flex;align-items:center;gap:10px 14px;min-width:0}
+.head .file{flex:1;min-width:0;max-width:none}
+.bar-toggle{flex:none;display:inline-flex;align-items:center;gap:4px}
+.bar-toggle .chev{display:inline-block;transition:transform .15s}
+.bar-toggle .alert{color:var(--warn);font-weight:700}
+.bar .head + .row{margin-top:8px}
+.bar.min{padding-block:5px}
+.bar.min > :not(.head){display:none!important}
+.bar.min .brand{font-size:15px}
+.bar.min .bar-toggle{padding:3px 9px}
+.bar.min .bar-toggle .chev{transform:rotate(180deg)}
+@media (prefers-reduced-motion:reduce){.bar-toggle .chev{transition:none}}
 /* Markdown */
 .text .md-h{font-weight:600;color:var(--ai);line-height:1.5;margin-block:.3em;text-wrap:balance}
 .text h1.md-h{font-size:1.45em}.text h2.md-h{font-size:1.25em}.text h3.md-h{font-size:1.1em}
@@ -111,13 +124,16 @@ main{flex:1;min-height:0;position:relative}
 </head>
 <body>
 
-<header class="bar">
-  <div class="row">
+<header class="bar" id="bar">
+  <div class="head">
     <span class="brand">AgilNote</span>
+    <span class="file" id="fname">見本：アビドス対策委員会杯（冒頭）</span>
+    <button class="bar-toggle" id="barToggle" aria-expanded="true" aria-controls="bar" title="メニューをたたむ（キーボードの M でも切り替え）"><span class="alert" id="barAlert" hidden>！</span><span id="barLabel">たたむ</span><span class="chev" aria-hidden="true">▴</span></button>
+  </div>
+  <div class="row">
     <label class="btn" for="fileIn">ファイルを開く<input id="fileIn" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden></label>
     <select id="fmt" aria-label="形式"><option value="txt">テキスト</option><option value="md">Markdown</option></select>
     <select id="enc" aria-label="文字コード"><option value="utf-8">UTF-8</option><option value="shift_jis">Shift_JIS</option></select>
-    <span class="file" id="fname">見本：アビドス対策委員会杯（冒頭）</span>
     <div class="seg" role="group" aria-label="組み方向">
       <button id="hBtn" aria-pressed="true">横書き</button><button id="vBtn" aria-pressed="false">縦書き</button>
     </div>
@@ -180,7 +196,7 @@ const PRESETS={
   book:{fs:18,lh:1.75,pg:0,ms:42,face:"min",squash:true}
 };
 const $=id=>document.getElementById(id);
-let state={fs:17,lh:1.9,pg:0,ms:36,face:"min",squash:false,vert:false,view:"reading"};
+let state={fs:17,lh:1.9,pg:0,ms:36,face:"min",squash:false,vert:false,view:"reading",barMin:false};
 let raw=SAMPLE, rawBytes=null, fmt="txt";
 try{Object.assign(state,JSON.parse(localStorage.getItem("agilnote")||"{}"))}catch(e){}
 const save=()=>{try{localStorage.setItem("agilnote",JSON.stringify(state))}catch(e){}};
@@ -266,12 +282,34 @@ function apply(){
   $("stage").classList.toggle("v",state.vert);
   $("hBtn").setAttribute("aria-pressed",!state.vert);$("vBtn").setAttribute("aria-pressed",state.vert);
   render();save();
+  setBar();
+}
+function setBar(){
+  const min=!!state.barMin, b=$("barToggle");
+  $("bar").classList.toggle("min",min);
+  b.setAttribute("aria-expanded",String(!min));
+  $("barLabel").textContent=min?"メニュー":"たたむ";
+  b.title=min?"メニューを開く（キーボードの M でも切り替え）":"メニューをたたむ（キーボードの M でも切り替え）";
+  $("barAlert").hidden=!(min && !$("warn").hidden);
+}
+function toggleBar(){
+  /* 読んでいる位置を保つ：帯の高さが変わる分だけ本文の位置がずれないようにする */
+  const s=$("stage"), top=s.scrollTop, left=s.scrollLeft;
+  state.barMin=!state.barMin; setBar(); save();
+  s.scrollTop=top; s.scrollLeft=left;
 }
 /* 読み始めの位置へ。縦書きは右端が冒頭 */
 function toStart(){requestAnimationFrame(()=>{const s=$("stage");s.scrollTop=0;s.scrollLeft=state.vert?s.scrollWidth:0})}
 ["fs","lh","pg","ms"].forEach(k=>$(k).addEventListener("input",e=>{state[k]=+e.target.value;apply()}));
 $("face").onchange=e=>{state.face=e.target.value;apply()};
 $("squash").onchange=e=>{state.squash=e.target.checked;apply()};
+$("barToggle").onclick=toggleBar;
+addEventListener("keydown",e=>{
+  if(e.key!=="m"&&e.key!=="M") return;
+  if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing) return;
+  const t=e.target; if(t&&(t.tagName==="TEXTAREA"||t.tagName==="INPUT"||t.tagName==="SELECT"||t.isContentEditable)) return;
+  toggleBar();
+});
 $("readBtn").onclick=()=>{state.view="reading";apply()};
 $("fullBtn").onclick=()=>{state.view="full";apply()};
 $("fmt").onchange=e=>{fmt=e.target.value;apply();toStart()};
