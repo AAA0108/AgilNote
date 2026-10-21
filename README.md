@@ -3,7 +3,7 @@
 テキストファイルの小説を、横書き・縦書きで読みやすく表示するビューアです。
 ブラウザで動き、Windows やスマホにアプリとして入れられます。
 
-**開く:** https://aaa0108.github.io/agilnote/
+**開く:** https://aaa0108.github.io/AgilNote/
 
 ## できること
 
