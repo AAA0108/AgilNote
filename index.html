@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f4b7c">
-<meta name="description" content="テキストファイルの小説を横書き・縦書きで読むビューア">
+<meta name="description" content="テキスト・Markdownの小説を横書き・縦書きで読むビューア">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -12,7 +12,7 @@
 <title>AgilNote</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500&family=BIZ+UDPGothic:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500&family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDGothic&display=swap">
 <style>
 :root{padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px);box-sizing:border-box}
 body{margin:0;font-size:14px}
@@ -20,18 +20,19 @@ body{margin:0;font-size:14px}
 /* 上に細い操作帯、下に紙面。紙面は横書き＝中央の段組、縦書き＝右から左へ流れる帯 */
 :root{
   --paper:#f3f4f1; --sheet:#fbfbf8; --ink:#23252b; --muted:#6b6f78; --rule:#d9dbd6;
-  --ai:#2f4b7c; --ai-soft:#e3e8f1;
+  --ai:#2f4b7c; --ai-soft:#e3e8f1; --warn:#8a5a00; --warn-soft:#fbf0d9;
   --f-body:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
   --f-goth:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
   --f-ui:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-mono:"BIZ UDGothic",ui-monospace,Consolas,monospace;
   --fs:18px; --lh:1.9; --measure:36em; --pgap:0em;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --paper:#16181d; --sheet:#1d2026; --ink:#dcdde0; --muted:#8d929c; --rule:#30343c;
-  --ai:#9db4dc; --ai-soft:#263247; color-scheme:dark}}
+  --ai:#9db4dc; --ai-soft:#263247; --warn:#e2b45c; --warn-soft:#3a2f1a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#16181d; --sheet:#1d2026; --ink:#dcdde0; --muted:#8d929c; --rule:#30343c;
-  --ai:#9db4dc; --ai-soft:#263247; color-scheme:dark}
+  --ai:#9db4dc; --ai-soft:#263247; --warn:#e2b45c; --warn-soft:#3a2f1a; color-scheme:dark}
 html,body{height:100%}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-ui);display:flex;flex-direction:column}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
@@ -65,12 +66,39 @@ main{flex:1;min-height:0;position:relative}
 .text p.title{font-weight:600;font-size:1.25em;margin-bottom:.4em;color:var(--ai)}
 .text p.sep{text-align:center;color:var(--muted)}
 .text rt{font-size:.5em;color:var(--muted)}
+/* Markdown */
+.text .md-h{font-weight:600;color:var(--ai);line-height:1.5;margin-block:.3em;text-wrap:balance}
+.text h1.md-h{font-size:1.45em}.text h2.md-h{font-size:1.25em}.text h3.md-h{font-size:1.1em}
+.text h4.md-h,.text h5.md-h,.text h6.md-h{font-size:1em}
+.text strong{font-weight:600}
+.text em{font-style:normal;-webkit-text-emphasis:filled sesame;text-emphasis:filled sesame}
+.text del{color:var(--muted)}
+.text a{color:var(--ai);text-underline-offset:.2em}
+.text .md-badlink{text-decoration:underline dotted;color:var(--muted)}
+.text code{font-family:var(--f-mono);font-size:.85em;background:var(--ai-soft);border-radius:4px;padding:.05em .3em}
+.text .hr{display:flex;justify-content:center;margin-block:.8em}
+.text .hr span{inline-size:5em;border-block-start:1px solid var(--muted)}
+.text .md-list{margin-block:.3em}
+.text .md-list ul,.text .md-list ol{margin:0;padding-inline-start:1.6em}
+.text blockquote{margin:.4em 0;padding-inline-start:.9em;border-inline-start:3px solid var(--rule);color:var(--muted)}
+.text .hblock{writing-mode:horizontal-tb;overflow:auto;max-width:100%;margin-block:.3em;font-family:var(--f-ui);font-size:.85em;line-height:1.6}
+.text pre{margin:0;padding:.7em .9em;background:var(--sheet);border:1px solid var(--rule);border-radius:6px;font-family:var(--f-mono);white-space:pre}
+.text pre code{background:none;padding:0;font-size:1em}
+.text table{border-collapse:collapse;font-variant-numeric:tabular-nums}
+.text th,.text td{border:1px solid var(--rule);padding:.3em .7em;vertical-align:top;white-space:pre-wrap}
+.text th{background:var(--ai-soft);font-weight:700}
+.text .internal{border:1px dashed var(--muted);border-radius:6px;padding:.3em .9em;margin-block:.6em;background:var(--sheet)}
+.text .internal-label,.text .internal-note{font-family:var(--f-ui);font-size:.7em;color:var(--muted);letter-spacing:.05em}
+.text .internal-note{margin-block:.4em}
+.warn{font-size:12px;color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:6px 10px;margin-top:6px}
+.warn ul{margin:4px 0 0;padding-left:1.4em}
 /* 縦書き */
 .stage.v{overflow-x:auto;overflow-y:hidden}
 .stage.v .text{writing-mode:vertical-rl;text-orientation:mixed;max-width:none;height:100%;max-height:var(--measure);margin:auto 0;margin-left:0}
 .stage.v .text p{margin:0 0 0 var(--pgap)}
 .stage.v .text p.blank{height:auto;width:calc(var(--fs) * var(--lh))}
 .stage.v .tcy{text-combine-upright:all}
+.stage.v .text .hblock{width:min(34em,85vw);max-height:100%;margin-block:0 1em}
 .drop{position:absolute;inset:12px;border:2px dashed var(--ai);border-radius:12px;background:color-mix(in srgb,var(--ai-soft) 85%,transparent);display:grid;place-items:center;font-size:16px;color:var(--ai);pointer-events:none}
 .stats{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .stats b{color:var(--ink);font-weight:700}
@@ -86,11 +114,15 @@ main{flex:1;min-height:0;position:relative}
 <header class="bar">
   <div class="row">
     <span class="brand">AgilNote</span>
-    <label class="btn" for="fileIn">ファイルを開く<input id="fileIn" type="file" accept=".txt,text/plain" hidden></label>
+    <label class="btn" for="fileIn">ファイルを開く<input id="fileIn" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden></label>
+    <select id="fmt" aria-label="形式"><option value="txt">テキスト</option><option value="md">Markdown</option></select>
     <select id="enc" aria-label="文字コード"><option value="utf-8">UTF-8</option><option value="shift_jis">Shift_JIS</option></select>
     <span class="file" id="fname">見本：アビドス対策委員会杯（冒頭）</span>
     <div class="seg" role="group" aria-label="組み方向">
       <button id="hBtn" aria-pressed="true">横書き</button><button id="vBtn" aria-pressed="false">縦書き</button>
+    </div>
+    <div class="seg" role="group" aria-label="内部記録" id="viewSeg" hidden>
+      <button id="readBtn" aria-pressed="true">読書表示</button><button id="fullBtn" aria-pressed="false">全文表示</button>
     </div>
     <div class="presets">見え方
       <button data-preset="site">投稿サイト風</button>
@@ -113,16 +145,18 @@ main{flex:1;min-height:0;position:relative}
     </div>
     <div class="row"><div class="paste">
       <textarea id="pasteBox" placeholder="ここに本文を貼り付けて「表示する」"></textarea>
-      <div class="row"><button id="pasteGo">表示する</button><span class="note">ファイルはこの端末内で読み込むだけで、どこにも送信しません。|漢字《かんじ》のルビ記法に対応。ファイルは画面にドラッグしても開けます。</span></div>
+      <div class="row"><select id="pasteFmt" aria-label="貼り付ける本文の形式"><option value="txt">プレーンテキストとして</option><option value="md">Markdownとして</option></select><button id="pasteGo">表示する</button><span class="note">ファイルはこの端末内で読み込むだけで、どこにも送信しません。|漢字《かんじ》のルビ記法に対応。.txt と .md は画面にドラッグしても開けます。</span></div>
     </div></div>
   </details>
+  <div class="warn" id="warn" role="status" hidden></div>
   <div class="stats" id="stats" style="margin-top:6px"></div>
 </header>
 <main id="main">
   <div class="stage" id="stage"><article class="text" id="text"></article></div>
-  <div class="drop" id="drop" hidden>ここに .txt をドロップ</div>
+  <div class="drop" id="drop" hidden>ここに .txt / .md をドロップ</div>
 </main>
 
+<script src="md.js"></script>
 <script>
 const SAMPLE=`アビドス対策委員会杯
 ～勝負に私情を持ち込まないでください～
@@ -146,8 +180,8 @@ const PRESETS={
   book:{fs:18,lh:1.75,pg:0,ms:42,face:"min",squash:true}
 };
 const $=id=>document.getElementById(id);
-let state={fs:17,lh:1.9,pg:0,ms:36,face:"min",squash:false,vert:false};
-let raw=SAMPLE, rawBytes=null;
+let state={fs:17,lh:1.9,pg:0,ms:36,face:"min",squash:false,vert:false,view:"reading"};
+let raw=SAMPLE, rawBytes=null, fmt="txt";
 try{Object.assign(state,JSON.parse(localStorage.getItem("agilnote")||"{}"))}catch(e){}
 const save=()=>{try{localStorage.setItem("agilnote",JSON.stringify(state))}catch(e){}};
 
@@ -160,6 +194,11 @@ function inline(s){
   return h;
 }
 function render(){
+  $("fmt").value=fmt;
+  $("viewSeg").hidden=fmt!=="md";
+  $("readBtn").setAttribute("aria-pressed",state.view!=="full");$("fullBtn").setAttribute("aria-pressed",state.view==="full");
+  if(fmt==="md") return renderMd();
+  $("warn").hidden=true;
   const lines=raw.replace(/\r\n?/g,"\n").replace(/\n+$/,"").split("\n");
   let out=[],firstText=true;
   lines.forEach((ln,i)=>{
@@ -173,6 +212,35 @@ function render(){
   $("text").innerHTML=out.join("");
   stats(lines);
 }
+/* Markdown：md.js で描画し、表示された構造から統計を取る */
+function renderMd(){
+  const r=AgilMD.render(raw,{vertical:state.vert,squash:state.squash,view:state.view});
+  $("text").innerHTML=r.html;
+  const w=$("warn");
+  if(r.warnings.length){
+    w.innerHTML="内部記録の目印が正しく対応していないため、何も隠さずに全文を表示しています。<ul>"+r.warnings.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
+    w.hidden=false;
+  } else w.hidden=true;
+  statsMd(r);
+}
+const plain=el=>{const c=el.cloneNode(true);c.querySelectorAll("rt").forEach(x=>x.remove());return c.textContent.replace(/[\s　]/g,"")};
+function statsMd(r){
+  let paras=[],other=0;
+  for(const el of $("text").children){
+    const k=el.dataset.kind;
+    if(k==="para") paras.push(plain(el));
+    else if(k==="heading"||k==="list"||k==="table"||k==="code"||k==="quote") other+=plain(el).length;
+  }
+  const isDlg=t=>/^[「『]/.test(t);
+  const dlg=paras.filter(isDlg).length, narr=paras.filter(t=>!isDlg(t));
+  const bodyChars=paras.join("").length;
+  const narrChars=narr.join("").length;
+  const short=narr.filter(t=>t.length<=12).length;
+  let h=`文字数 <b>${(bodyChars+other).toLocaleString()}</b>　本文段落 <b>${paras.length}</b>　台詞段落 <b>${paras.length?Math.round(dlg/paras.length*100):0}%</b>　地の文の平均 <b>${narr.length?Math.round(narrChars/narr.length):0}</b>字/段落　12字以下の地の文 <b>${short}</b>　その他（見出し・表など） <b>${other.toLocaleString()}</b>字`;
+  if(r.internalCount) h+=`　内部記録 <b>${r.internalCount}</b>件（統計外）`;
+  $("stats").innerHTML=h;
+  $("stats").title="段落の統計は本文の段落だけで数えます。見出し・表・リスト・引用・コードは別に数え、内部記録はどちらの表示でも統計に含めません。";
+}
 function stats(lines){
   const body=lines.filter(l=>l.trim());
   const chars=body.join("").replace(/[\s　]/g,"").length;
@@ -180,6 +248,7 @@ function stats(lines){
   const narr=body.length-dlg;
   const narrChars=body.filter(l=>!/^[\s　]*[「『]/.test(l)).join("").replace(/[\s　]/g,"").length;
   const short=body.filter(l=>!/^[\s　]*[「『]/.test(l)&&l.replace(/[\s　]/g,"").length<=12).length;
+  $("stats").title="";
   $("stats").innerHTML=`文字数 <b>${chars.toLocaleString()}</b>　段落 <b>${body.length}</b>　台詞段落 <b>${body.length?Math.round(dlg/body.length*100):0}%</b>　地の文の平均 <b>${narr?Math.round(narrChars/narr):0}</b>字/段落　12字以下の地の文 <b>${short}</b>`;
 }
 function apply(){
@@ -197,22 +266,27 @@ function apply(){
   $("stage").classList.toggle("v",state.vert);
   $("hBtn").setAttribute("aria-pressed",!state.vert);$("vBtn").setAttribute("aria-pressed",state.vert);
   render();save();
-  if(state.vert) requestAnimationFrame(()=>{const s=$("stage");s.scrollLeft=s.scrollWidth*(getComputedStyle(s).direction==="rtl"?-1:0)});
 }
+/* 読み始めの位置へ。縦書きは右端が冒頭 */
+function toStart(){requestAnimationFrame(()=>{const s=$("stage");s.scrollTop=0;s.scrollLeft=state.vert?s.scrollWidth:0})}
 ["fs","lh","pg","ms"].forEach(k=>$(k).addEventListener("input",e=>{state[k]=+e.target.value;apply()}));
 $("face").onchange=e=>{state.face=e.target.value;apply()};
 $("squash").onchange=e=>{state.squash=e.target.checked;apply()};
-$("hBtn").onclick=()=>{state.vert=false;apply()};
-$("vBtn").onclick=()=>{state.vert=true;apply();$("stage").scrollLeft=0};
+$("readBtn").onclick=()=>{state.view="reading";apply()};
+$("fullBtn").onclick=()=>{state.view="full";apply()};
+$("fmt").onchange=e=>{fmt=e.target.value;apply();toStart()};
+$("hBtn").onclick=()=>{state.vert=false;apply();toStart()};
+$("vBtn").onclick=()=>{state.vert=true;apply();toStart()};
 document.querySelectorAll("[data-preset]").forEach(b=>b.onclick=()=>{Object.assign(state,PRESETS[b.dataset.preset]);apply()});
 $("themeBtn").onclick=()=>{const d=document.documentElement;const dark=d.dataset.theme?d.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;d.dataset.theme=dark?"light":"dark"};
 
-function decode(){ if(!rawBytes) return; try{raw=new TextDecoder($("enc").value).decode(rawBytes)}catch(e){raw=new TextDecoder().decode(rawBytes)} apply(); $("stage").scrollTop=0;$("stage").scrollLeft=0 }
-function loadFile(f){ if(!f) return; $("fname").textContent=f.name; f.arrayBuffer().then(b=>{rawBytes=b;
+function decode(){ if(!rawBytes) return; try{raw=new TextDecoder($("enc").value).decode(rawBytes)}catch(e){raw=new TextDecoder().decode(rawBytes)} apply(); toStart() }
+const fmtOf=name=>/\.(md|markdown)$/i.test(name)?"md":"txt";
+function loadFile(f){ if(!f) return; $("fname").textContent=f.name; fmt=fmtOf(f.name); f.arrayBuffer().then(b=>{rawBytes=b;
   const u=new TextDecoder("utf-8",{fatal:true}); try{u.decode(b);$("enc").value="utf-8"}catch(e){$("enc").value="shift_jis"} decode()})}
 $("fileIn").onchange=e=>loadFile(e.target.files[0]);
 $("enc").onchange=decode;
-$("pasteGo").onclick=()=>{const t=$("pasteBox").value;if(!t.trim())return;raw=t;rawBytes=null;$("fname").textContent="貼り付けた本文";apply();$("stage").scrollTop=0};
+$("pasteGo").onclick=()=>{const t=$("pasteBox").value;if(!t.trim())return;raw=t;rawBytes=null;fmt=$("pasteFmt").value;$("fname").textContent="貼り付けた本文";apply();toStart()};
 let dc=0;
 addEventListener("dragenter",e=>{e.preventDefault();dc++;$("drop").hidden=false});
 addEventListener("dragleave",()=>{if(--dc<=0){dc=0;$("drop").hidden=true}});
@@ -258,7 +332,7 @@ async function loadStoredFonts(){
   if(state.face.startsWith("u:") && ![...$("face").options].some(o=>o.value===state.face)) state.face="min";
   apply();
 }
-apply();
+apply();toStart();
 loadStoredFonts();
 /* Windowsの「このアプリで開く」から渡されたファイル */
 if("launchQueue" in window){launchQueue.setConsumer(async p=>{if(p.files&&p.files.length){const f=await p.files[0].getFile();loadFile(f)}})}
