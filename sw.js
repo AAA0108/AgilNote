@@ -1,7 +1,7 @@
 // AgilNote: 本体はキャッシュしてオフラインでも開けるようにする。
 // 本体を更新したら VERSION を上げる。
-const VERSION = "agilnote-v3";
-const SHELL = ["./", "index.html", "md.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
+const VERSION = "agilnote-v4";
+const SHELL = ["./", "index.html", "md.js", "edit.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 const FONT_CACHE = "agilnote-fonts";
 
 self.addEventListener("install", e => {

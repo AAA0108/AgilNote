@@ -26,13 +26,17 @@ body{margin:0;font-size:14px}
   --f-ui:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",sans-serif;
   --f-mono:"BIZ UDGothic",ui-monospace,Consolas,monospace;
   --fs:18px; --lh:1.9; --measure:36em; --pgap:0em;
+  /* 編集モードの色：書き換えた段落／足した文字／消した場所 */
+  --chg-line:#fbf0c6; --chg-add:#f2cf63; --chg-del:#c8441a;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --paper:#16181d; --sheet:#1d2026; --ink:#dcdde0; --muted:#8d929c; --rule:#30343c;
-  --ai:#9db4dc; --ai-soft:#263247; --warn:#e2b45c; --warn-soft:#3a2f1a; color-scheme:dark}}
+  --ai:#9db4dc; --ai-soft:#263247; --warn:#e2b45c; --warn-soft:#3a2f1a;
+  --chg-line:#352f1f; --chg-add:#73591a; --chg-del:#f08a5d; color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#16181d; --sheet:#1d2026; --ink:#dcdde0; --muted:#8d929c; --rule:#30343c;
-  --ai:#9db4dc; --ai-soft:#263247; --warn:#e2b45c; --warn-soft:#3a2f1a; color-scheme:dark}
+  --ai:#9db4dc; --ai-soft:#263247; --warn:#e2b45c; --warn-soft:#3a2f1a;
+  --chg-line:#352f1f; --chg-add:#73591a; --chg-del:#f08a5d; color-scheme:dark}
 html,body{height:100%}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-ui);display:flex;flex-direction:column}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
@@ -79,6 +83,26 @@ main{flex:1;min-height:0;position:relative}
 .bar.min .bar-toggle{padding:3px 9px}
 .bar.min .bar-toggle .chev{transform:rotate(180deg)}
 @media (prefers-reduced-motion:reduce){.bar-toggle .chev{transition:none}}
+/* 読書／編集の切替と保存（1段目に置き、たたんでも使える） */
+.mode{flex:none}
+.mode button{padding:4px 10px}
+.mode .dot{color:var(--warn);margin-left:2px;font-size:.8em}
+.save{flex:none;padding:4px 12px}
+.save:not(:disabled){background:var(--ai);color:var(--sheet);border-color:var(--ai);font-weight:700}
+.save:disabled{opacity:.45;cursor:default}
+.bar.min .mode button,.bar.min .save{padding:3px 9px}
+@media (max-width:480px){.head .brand{display:none}}
+/* 編集面：原文をそのまま、読書と同じ書体・大きさ・向きで書き換える */
+.text.editor{white-space:pre-wrap;outline:none;caret-color:var(--ai);padding-block-end:4em;min-block-size:3em}
+.edit-info{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:6px;align-items:center}
+.edit-info b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.edit-info .ok{color:var(--ai)}
+.sw{display:inline-block;width:1.6em;height:1em;border-radius:3px;vertical-align:-.15em;margin-right:4px}
+.sw.l{background:var(--chg-line)}.sw.a{background:var(--chg-add)}
+.swd{text-decoration:underline wavy var(--chg-del);text-underline-offset:.2em;color:var(--ink);margin-right:2px}
+::highlight(an-line){background-color:var(--chg-line)}
+::highlight(an-add){background-color:var(--chg-add);color:var(--ink)}
+::highlight(an-del){text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:var(--chg-del)}
 /* Markdown */
 .text .md-h{font-weight:600;color:var(--ai);line-height:1.5;margin-block:.3em;text-wrap:balance}
 .text h1.md-h{font-size:1.45em}.text h2.md-h{font-size:1.25em}.text h3.md-h{font-size:1.1em}
@@ -128,10 +152,14 @@ main{flex:1;min-height:0;position:relative}
   <div class="head">
     <span class="brand">AgilNote</span>
     <span class="file" id="fname">見本：アビドス対策委員会杯（冒頭）</span>
+    <div class="seg mode" role="group" aria-label="モード">
+      <button id="readMode" aria-pressed="true">読書</button><button id="editMode" aria-pressed="false" title="本文を書き換える（保存は Ctrl+S でも）">編集<span class="dot" id="editDot" hidden>●</span></button>
+    </div>
+    <button class="save" id="saveBtn" hidden disabled title="ファイルに保存（Ctrl+S）">保存</button>
     <button class="bar-toggle" id="barToggle" aria-expanded="true" aria-controls="bar" title="メニューをたたむ（キーボードの M でも切り替え）"><span class="alert" id="barAlert" hidden>！</span><span id="barLabel">たたむ</span><span class="chev" aria-hidden="true">▴</span></button>
   </div>
   <div class="row">
-    <label class="btn" for="fileIn">ファイルを開く<input id="fileIn" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden></label>
+    <label class="btn" for="fileIn" id="openLbl">ファイルを開く<input id="fileIn" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden></label>
     <select id="fmt" aria-label="形式"><option value="txt">テキスト</option><option value="md">Markdown</option></select>
     <select id="enc" aria-label="文字コード"><option value="utf-8">UTF-8</option><option value="shift_jis">Shift_JIS</option></select>
     <div class="seg" role="group" aria-label="組み方向">
@@ -166,13 +194,15 @@ main{flex:1;min-height:0;position:relative}
   </details>
   <div class="warn" id="warn" role="status" hidden></div>
   <div class="stats" id="stats" style="margin-top:6px"></div>
+  <div class="edit-info" id="editInfo" role="status" hidden></div>
 </header>
 <main id="main">
-  <div class="stage" id="stage"><article class="text" id="text"></article></div>
+  <div class="stage" id="stage"><article class="text" id="text"></article><div class="text editor" id="ed" hidden lang="ja" spellcheck="false" autocapitalize="off" autocorrect="off" translate="no" aria-label="本文の編集" aria-multiline="true" role="textbox"></div></div>
   <div class="drop" id="drop" hidden>ここに .txt / .md をドロップ</div>
 </main>
 
 <script src="md.js"></script>
+<script src="edit.js"></script>
 <script>
 const SAMPLE=`アビドス対策委員会杯
 ～勝負に私情を持ち込まないでください～
@@ -198,6 +228,9 @@ const PRESETS={
 const $=id=>document.getElementById(id);
 let state={fs:17,lh:1.9,pg:0,ms:36,face:"min",squash:false,vert:false,view:"reading",barMin:false};
 let raw=SAMPLE, rawBytes=null, fmt="txt";
+/* 編集モード：base＝最後に開いた／保存した本文（行を \n でつないだもの）。保存するまで raw は変えない */
+let editing=false, dirty=false, base="", baseLines=[""], finalNL=false, eol="\n", bom=false;
+let fileHandle=null, fileName=null, curEnc="utf-8", saveMsg="", changes=0;
 try{Object.assign(state,JSON.parse(localStorage.getItem("agilnote")||"{}"))}catch(e){}
 const save=()=>{try{localStorage.setItem("agilnote",JSON.stringify(state))}catch(e){}};
 
@@ -211,7 +244,7 @@ function inline(s){
 }
 function render(){
   $("fmt").value=fmt;
-  $("viewSeg").hidden=fmt!=="md";
+  $("viewSeg").hidden=fmt!=="md"||editing;
   $("readBtn").setAttribute("aria-pressed",state.view!=="full");$("fullBtn").setAttribute("aria-pressed",state.view==="full");
   if(fmt==="md") return renderMd();
   $("warn").hidden=true;
@@ -276,8 +309,14 @@ function apply(){
   $("pg").value=state.pg;$("pgO").textContent=(+state.pg).toFixed(1)+"行";
   $("ms").value=state.ms;$("msO").textContent=state.ms+"字";
   if(![...$("face").options].some(o=>o.value===state.face) && !state.face.startsWith("u:")) state.face="min";
-  $("face").value=state.face;$("text").classList.toggle("goth",state.face==="goth");
-  $("text").style.fontFamily=state.face.startsWith("u:")?`"${state.face.slice(2)}",var(--f-body)`:"";
+  $("face").value=state.face;
+  for(const el of [$("text"),$("ed")]){
+    el.classList.toggle("goth",state.face==="goth");
+    el.style.fontFamily=state.face.startsWith("u:")?`"${state.face.slice(2)}",var(--f-body)`:"";
+  }
+  $("text").hidden=editing;$("ed").hidden=!editing;
+  $("stats").hidden=editing;$("editInfo").hidden=!editing;$("saveBtn").hidden=!editing;
+  $("readMode").setAttribute("aria-pressed",!editing);$("editMode").setAttribute("aria-pressed",editing);
   $("squash").checked=state.squash;
   $("stage").classList.toggle("v",state.vert);
   $("hBtn").setAttribute("aria-pressed",!state.vert);$("vBtn").setAttribute("aria-pressed",state.vert);
@@ -318,18 +357,177 @@ $("vBtn").onclick=()=>{state.vert=true;apply();toStart()};
 document.querySelectorAll("[data-preset]").forEach(b=>b.onclick=()=>{Object.assign(state,PRESETS[b.dataset.preset]);apply()});
 $("themeBtn").onclick=()=>{const d=document.documentElement;const dark=d.dataset.theme?d.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;d.dataset.theme=dark?"light":"dark"};
 
-function decode(){ if(!rawBytes) return; try{raw=new TextDecoder($("enc").value).decode(rawBytes)}catch(e){raw=new TextDecoder().decode(rawBytes)} apply(); toStart() }
+function decode(){ if(!rawBytes) return; curEnc=$("enc").value; try{raw=new TextDecoder(curEnc).decode(rawBytes)}catch(e){raw=new TextDecoder().decode(rawBytes)} resetEditor(); apply(); toStart() }
 const fmtOf=name=>/\.(md|markdown)$/i.test(name)?"md":"txt";
-function loadFile(f){ if(!f) return; $("fname").textContent=f.name; fmt=fmtOf(f.name); f.arrayBuffer().then(b=>{rawBytes=b;
-  const u=new TextDecoder("utf-8",{fatal:true}); try{u.decode(b);$("enc").value="utf-8"}catch(e){$("enc").value="shift_jis"} decode()})}
-$("fileIn").onchange=e=>loadFile(e.target.files[0]);
-$("enc").onchange=decode;
-$("pasteGo").onclick=()=>{const t=$("pasteBox").value;if(!t.trim())return;raw=t;rawBytes=null;fmt=$("pasteFmt").value;$("fname").textContent="貼り付けた本文";apply();toStart()};
+/* handle：上書き保存に使うファイルの持ち手（開き方によっては無い） */
+async function loadFile(f,handle){ if(!f) return; if(!confirmDiscard()) return;
+  fileHandle=handle||null; fileName=f.name; $("fname").textContent=f.name; fmt=fmtOf(f.name);
+  const b=await f.arrayBuffer(); rawBytes=b;
+  const u8=new Uint8Array(b); bom=u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF;
+  const u=new TextDecoder("utf-8",{fatal:true}); try{u.decode(b);$("enc").value="utf-8"}catch(e){$("enc").value="shift_jis"} decode()}
+$("fileIn").onchange=e=>{loadFile(e.target.files[0]);e.target.value=""};
+/* 開いたファイルに上書きできるよう、使えるブラウザ（Windows の Edge／Chrome など）ではファイルの持ち手ごと開く */
+$("openLbl").addEventListener("click",async e=>{
+  if(!window.showOpenFilePicker) return;
+  e.preventDefault();
+  try{const [h]=await showOpenFilePicker({types:[{description:"テキスト・Markdown",accept:{"text/plain":[".txt"],"text/markdown":[".md",".markdown"]}}]});
+    loadFile(await h.getFile(),h)}catch(_){}
+});
+$("enc").onchange=()=>{ if(!confirmDiscard()){ $("enc").value=curEnc; return } if(rawBytes) decode(); else curEnc=$("enc").value };
+$("pasteGo").onclick=()=>{const t=$("pasteBox").value;if(!t.trim())return;if(!confirmDiscard())return;
+  raw=t;rawBytes=null;fileHandle=null;fileName=null;bom=false;fmt=$("pasteFmt").value;$("fname").textContent="貼り付けた本文";resetEditor();apply();toStart()};
+/* ファイルのドラッグだけを受ける（編集中に文字をドラッグして動かすのは邪魔しない） */
+const hasFiles=e=>!!e.dataTransfer&&[...e.dataTransfer.types].includes("Files");
 let dc=0;
-addEventListener("dragenter",e=>{e.preventDefault();dc++;$("drop").hidden=false});
-addEventListener("dragleave",()=>{if(--dc<=0){dc=0;$("drop").hidden=true}});
-addEventListener("dragover",e=>e.preventDefault());
-addEventListener("drop",e=>{e.preventDefault();dc=0;$("drop").hidden=true;loadFile(e.dataTransfer.files[0])});
+addEventListener("dragenter",e=>{if(!hasFiles(e))return;e.preventDefault();dc++;$("drop").hidden=false});
+addEventListener("dragleave",e=>{if(!hasFiles(e))return;if(--dc<=0){dc=0;$("drop").hidden=true}});
+addEventListener("dragover",e=>{if(hasFiles(e))e.preventDefault()});
+addEventListener("drop",e=>{if(!hasFiles(e))return;e.preventDefault();dc=0;$("drop").hidden=true;
+  const it=e.dataTransfer.items&&e.dataTransfer.items[0], f=e.dataTransfer.files[0];
+  const hp=it&&it.getAsFileSystemHandle?it.getAsFileSystemHandle().catch(()=>null):Promise.resolve(null);
+  hp.then(h=>loadFile(f,h&&h.kind==="file"?h:null))});
+
+/* ---------- 編集モード ---------- */
+const ed=$("ed");
+ed.contentEditable="plaintext-only";
+if(ed.contentEditable!=="plaintext-only") ed.contentEditable="true";
+ed.addEventListener("beforeinput",e=>{if(e.inputType.startsWith("format"))e.preventDefault()});
+/* 編集面の文字を読む。ふつうは文字だけだが、ブラウザが改行を <br> や <div> にした場合も 1 行として数える */
+function edRead(){
+  const segs=[]; let text="";
+  (function walk(n){ for(const c of n.childNodes){
+    if(c.nodeType===3){segs.push([c,text.length]);text+=c.data}
+    else if(c.nodeName==="BR") text+="\n";
+    else { if(/^(DIV|P)$/.test(c.nodeName)&&text&&!text.endsWith("\n")) text+="\n"; walk(c) }
+  }})(ed);
+  /* 末尾の改行 1 つは、最後の行を表示するための置き場（本文には含めない） */
+  return {text, segs, body:text.endsWith("\n")?text.slice(0,-1):text};
+}
+function resetEditor(){
+  const n=raw.replace(/\r\n?/g,"\n");
+  eol=/\r\n/.test(raw)?"\r\n":/\r/.test(raw)?"\r":"\n";
+  finalNL=n.endsWith("\n"); base=finalNL?n.slice(0,-1):n; baseLines=base.split("\n");
+  ed.textContent=base+"\n"; saveMsg=""; updateMarks();
+}
+function rangeOf(segs,s,e){
+  const find=p=>{let lo=0,hi=segs.length-1,k=-1;while(lo<=hi){const m=(lo+hi)>>1;if(segs[m][1]<=p){k=m;lo=m+1}else hi=m-1}
+    for(;k>=0;k--){const [nd,st]=segs[k];if(p<=st+nd.data.length) return [nd,p-st]} return null};
+  const a=find(s),b=find(e); if(!a||!b) return null;
+  const r=new Range(); try{r.setStart(a[0],a[1]);r.setEnd(b[0],b[1])}catch(_){return null} return r;
+}
+function updateMarks(){
+  const {segs,body}=edRead();
+  dirty=body!==base;
+  const m=dirty?AgilEdit.marks(baseLines,body.split("\n")):{line:[],add:[],del:[],changes:0};
+  changes=m.changes;
+  if(window.CSS&&CSS.highlights&&window.Highlight){
+    const hl=rs=>{const h=new Highlight();for(const r of rs){const g=rangeOf(segs,r[0],r[1]);if(g)h.add(g)}return h};
+    const a=hl(m.add),d=hl(m.del.map(p=>AgilEdit.delSpot(body,p)).filter(Boolean));
+    a.priority=1;d.priority=2;
+    CSS.highlights.set("an-line",hl(m.line));CSS.highlights.set("an-add",a);CSS.highlights.set("an-del",d);
+  }
+  if(dirty) saveMsg="";
+  editUI();
+}
+function editUI(){
+  $("saveBtn").disabled=!dirty;
+  $("editDot").hidden=!(dirty&&!editing);
+  $("editMode").title=dirty?"保存していない変更があります":"本文を書き換える（保存は Ctrl+S でも）";
+  const legend='<span><span class="sw l"></span>書き換えた段落</span><span><span class="sw a"></span>足した文字</span><span><span class="swd">字</span>消した場所</span>';
+  $("editInfo").innerHTML=dirty
+    ? `編集中　変更 <b>${changes}</b> か所（未保存）${legend}`
+    : saveMsg?`<span class="ok">${esc(saveMsg)}</span>`:"編集中　原文のままです。文字をクリックすると書き換えられます";
+}
+let markTimer=0;
+ed.addEventListener("input",e=>{if(e.isComposing)return;clearTimeout(markTimer);markTimer=setTimeout(updateMarks,120)});
+ed.addEventListener("compositionend",()=>{clearTimeout(markTimer);markTimer=setTimeout(updateMarks,120)});
+function confirmDiscard(){
+  if(editing||dirty) updateMarks();
+  return !dirty||confirm("保存していない変更があります。変更を捨てて続けますか？");
+}
+/* 読んでいた辺りを保ったまま切り替える（全体の何割まで進んでいたかで合わせる） */
+function scrollRatio(){const s=$("stage");
+  if(state.vert){const max=s.scrollWidth-s.clientWidth;return max>0?Math.abs(s.scrollLeft)/max:0}
+  const max=s.scrollHeight-s.clientHeight;return max>0?s.scrollTop/max:0}
+function setScrollRatio(r){requestAnimationFrame(()=>{const s=$("stage");
+  if(state.vert){const max=s.scrollWidth-s.clientWidth;s.scrollLeft=-r*max;if(r>0&&s.scrollLeft===0)s.scrollLeft=r*max}
+  else s.scrollTop=r*(s.scrollHeight-s.clientHeight)})}
+function setMode(on){
+  if(on===editing) return;
+  const r=scrollRatio(); editing=on;
+  if(on) updateMarks();
+  apply(); editUI(); setScrollRatio(r);
+}
+$("readMode").onclick=()=>setMode(false);
+$("editMode").onclick=()=>setMode(true);
+$("saveBtn").onclick=()=>saveFile();
+addEventListener("keydown",e=>{
+  if(editing&&(e.ctrlKey||e.metaKey)&&!e.altKey&&(e.key==="s"||e.key==="S")){e.preventDefault();saveFile()}
+});
+addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue=""}});
+
+/* ---------- 保存 ----------
+ * 開いたときの文字コード・BOM・改行コード・末尾の改行を保ったまま書き出す。
+ * 書き先：開いたファイル（上書き）→ 保存先を選ぶ画面 → ダウンロード の順に、使えるものを使う */
+let saving=false;
+async function saveFile(){
+  if(saving) return;
+  updateMarks(); if(!dirty) return;
+  const body=edRead().body;
+  let out=body+(finalNL?"\n":""); if(eol!=="\n") out=out.replace(/\n/g,eol);
+  let enc=$("enc").value, bytes=null;
+  if(enc==="shift_jis"){
+    const r=AgilEdit.encodeSjis(out);
+    if(r.bad.length){
+      const list=r.bad.slice(0,12).join(" ")+(r.bad.length>12?` ほか${r.bad.length-12}種類`:"");
+      if(!confirm(`次の文字は Shift_JIS で保存できません：\n${list}\n\nOK：UTF-8 に切り替えて保存する\nキャンセル：保存をやめる（文字を直してから保存し直せます）`)) return;
+      enc="utf-8";
+    } else bytes=r.bytes;
+  }
+  if(!bytes){const u=new TextEncoder().encode(out);if(bom){bytes=new Uint8Array(u.length+3);bytes.set([0xEF,0xBB,0xBF]);bytes.set(u,3)}else bytes=u}
+  const name=fileName||(raw===SAMPLE?"AgilNote見本.txt":`AgilNote_${new Date().toISOString().slice(0,10)}.${fmt==="md"?"md":"txt"}`);
+  let how;
+  saving=true;$("saveBtn").disabled=true;
+  try{
+    if(fileHandle){ await writeTo(fileHandle,bytes); how="上書き" }
+    else if(window.showSaveFilePicker){
+      const h=await showSaveFilePicker({suggestedName:name,types:[{description:"テキスト・Markdown",accept:{"text/plain":[".txt"],"text/markdown":[".md",".markdown"]}}]});
+      await writeTo(h,bytes); fileHandle=h; fileName=h.name; $("fname").textContent=h.name; how="保存";
+    } else { download(bytes,name); fileName=name; $("fname").textContent=name; how="ダウンロード" }
+  }catch(err){
+    saving=false; updateMarks();
+    if(err&&err.name==="AbortError") return;
+    $("editInfo").innerHTML=`<span style="color:var(--warn)">保存できませんでした：${esc(String(err&&err.message||err))}</span>`;
+    return;
+  }
+  saving=false;
+  /* 保存したものを新しい原文にする。読書表示もこれに切り替わる */
+  rawBytes=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+  curEnc=enc; $("enc").value=enc;
+  raw=new TextDecoder(enc).decode(bytes);
+  const n=raw.replace(/\r\n?/g,"\n"), nb=finalNL?n.slice(0,-1):n;
+  if(nb===body){ base=body; baseLines=base.split("\n") }
+  else resetEditor(); /* Shift_JIS で記号を読み替えたときは、ファイルの中身どおりに表示し直す */
+  const t=new Date();
+  const hm=`${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`, en=enc==="shift_jis"?"Shift_JIS":"UTF-8";
+  saveMsg=how==="上書き"?`保存しました（${hm}・元のファイルに上書き・${en}）`
+    :how==="保存"?`保存しました（${hm}・${en}）`
+    :`ダウンロードしました（${hm}・${en}）。この端末では元のファイルに上書きできないので、ダウンロード先に保存されています`;
+  updateMarks(); apply();
+}
+async function writeTo(h,bytes){
+  if(h.queryPermission){
+    let p=await h.queryPermission({mode:"readwrite"});
+    if(p!=="granted") p=await h.requestPermission({mode:"readwrite"});
+    if(p!=="granted") throw new Error("ファイルへの書き込みが許可されませんでした");
+  }
+  const w=await h.createWritable(); await w.write(bytes); await w.close();
+}
+function download(bytes,name){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([bytes],{type:"application/octet-stream"}));a.download=name;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
+}
 $("stage").addEventListener("wheel",e=>{if(!state.vert||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;e.preventDefault();$("stage").scrollLeft-=e.deltaY},{passive:false});
 /* 追加書体：読み込んだフォントはこの端末のブラウザ内（IndexedDB）に保存 */
 const famOf=n=>"uf"+[...n].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7).toString(36);
@@ -370,10 +568,10 @@ async function loadStoredFonts(){
   if(state.face.startsWith("u:") && ![...$("face").options].some(o=>o.value===state.face)) state.face="min";
   apply();
 }
-apply();toStart();
+resetEditor();apply();toStart();
 loadStoredFonts();
 /* Windowsの「このアプリで開く」から渡されたファイル */
-if("launchQueue" in window){launchQueue.setConsumer(async p=>{if(p.files&&p.files.length){const f=await p.files[0].getFile();loadFile(f)}})}
+if("launchQueue" in window){launchQueue.setConsumer(async p=>{if(p.files&&p.files.length){const h=p.files[0];loadFile(await h.getFile(),h)}})}
 if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 </script>
 </body>
